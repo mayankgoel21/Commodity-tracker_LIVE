@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27,6 +26,8 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Sy
 .dot.error{background:var(--red)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 .last-lbl{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.nav-link{font-size:11px;color:var(--text2);text-decoration:none;border:1px solid var(--border);border-radius:var(--r);padding:4px 10px;font-family:'IBM Plex Mono',monospace;transition:all .15s}
+.nav-link:hover{color:var(--text);border-color:var(--border2)}
 .info-bar{background:#0d1a2e;border-bottom:1px solid #2563eb44;padding:9px 24px;display:flex;align-items:flex-start;gap:10px;font-size:12px;color:#93c5fd;line-height:1.6}
 .info-bar.hidden{display:none}
 .info-bar button{margin-left:auto;background:none;border:none;color:#4a566a;cursor:pointer;font-size:17px;line-height:1;flex-shrink:0;padding:0 4px}
@@ -106,6 +107,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Sy
 <div class="topbar">
   <div class="logo">Commodity<span>Track</span></div>
   <div class="topbar-right">
+    <a class="nav-link" href="/fx.html">FX Tracker →</a>
     <div class="status-pill"><span class="dot" id="sdot"></span><span id="stxt">Loading…</span></div>
     <span class="last-lbl" id="last-lbl"></span>
     <button class="refresh-btn" id="rbtn" onclick="loadPrices(true)" style="margin-left:4px">
@@ -117,7 +119,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Sy
 
 <div class="info-bar" id="info-bar">
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:2px"><circle cx="8" cy="8" r="6.5" stroke="#93c5fd" stroke-width="1.3"/><path d="M8 7v4M8 5.5v.5" stroke="#93c5fd" stroke-width="1.3" stroke-linecap="round"/></svg>
-  <span><strong>Fully automated.</strong> A Netlify scheduled function fetches fresh LME prices from the IMF on the 1st and 15th of every month — no manual action needed. This page always shows the latest stored data.</span>
+  <span><strong>Fully automated.</strong> A Netlify scheduled function fetches fresh LME prices from the IMF on the 1st and 15th of every month — no manual action needed.</span>
   <button onclick="document.getElementById('info-bar').classList.add('hidden')">×</button>
 </div>
 
@@ -158,7 +160,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Sy
     </div>
   </div>
   <div class="sched-actions">
-    <button class="btn btn-sec" onclick="addCalendar()">+ Share link</button>
+    <button class="btn btn-sec" onclick="copyLink()">📋 Copy share link</button>
     <button class="btn btn-primary" onclick="loadPrices(true)">Fetch now</button>
   </div>
 </div>
@@ -169,19 +171,19 @@ const COMMODITIES = [
   {id:'copper',name:'Copper',tag:'base',sectors:['shared'],unit:'USD/MT',note:'PCB wiring, motor windings, compressors. Key BOM driver for HVAC & washing machines. Hit record $13,270/t in Jan 2026 on tariff speculation. Verify cost-up claims against monthly LME average.',alert:false},
   {id:'aluminium',name:'Aluminium',tag:'base',sectors:['shared'],unit:'USD/MT',note:'Appliance chassis, AC condenser fins, heat sinks, TV frames. Up ~12% in 2025. US 25% tariff drives Midwest premium. Challenge claims above LME average.',alert:false},
   {id:'steel',name:'Steel (HRC)',tag:'base',sectors:['appliances'],unit:'USD/MT',note:'Washing machine cabinets, refrigerator panels, oven cavities. Down ~16% from Mar 2024. Weak China property + overcapacity. Excellent time to lock long-term contracts.',alert:false},
-  {id:'stainless',name:'Stainless 304',tag:'base',sectors:['appliances'],unit:'USD/MT',note:'Refrigerator liners, oven racks, washing machine drums. Nickel weakness + China overcapacity drove prices down. Watch nickel recovery — SS304 may firm.',alert:false},
+  {id:'stainless',name:'Stainless 304',tag:'base',sectors:['appliances'],unit:'USD/MT',note:'Refrigerator liners, oven racks, washing machine drums. Nickel weakness + China overcapacity drove prices down. Watch nickel recovery.',alert:false},
   {id:'zinc',name:'Zinc',tag:'base',sectors:['appliances'],unit:'USD/MT',note:'Galvanising steel for washing machines, fridges, ACs. Up ~20% vs 2024. Zinc surplus forecast 2026-27 may bring relief.',alert:false},
-  {id:'tin',name:'Tin',tag:'base',sectors:['electronics'],unit:'USD/MT',note:'PCB solder — essential for ALL consumer electronics. Myanmar ore exports down 70.7% in 2025. Hit record $56,800/t Jan 2026. Genuine verified cost driver — do not challenge without solder volume analysis.',alert:true},
-  {id:'nickel',name:'Nickel',tag:'specialty',sectors:['shared'],unit:'USD/MT',note:'Stainless steel alloying, NMC battery cathodes. Indonesia cut mining permits — first genuine supply response. Recovered to ~$17,000 in Mar 2026.',alert:false},
-  {id:'copper_wire',name:'Enamelled Cu Wire',tag:'appliance',sectors:['appliances'],unit:'USD/MT',note:'Motor windings in washing machines, AC compressors, refrigerator compressors. Tracks LME copper + ~20% fabrication premium. Biggest appliance BOM cost after steel.',alert:false},
+  {id:'tin',name:'Tin',tag:'base',sectors:['electronics'],unit:'USD/MT',note:'PCB solder — essential for ALL consumer electronics. Myanmar ore exports down 70.7% in 2025. Hit record $56,800/t Jan 2026. Genuine verified cost driver.',alert:true},
+  {id:'nickel',name:'Nickel',tag:'specialty',sectors:['shared'],unit:'USD/MT',note:'Stainless steel alloying, NMC battery cathodes. Indonesia cut mining permits. Recovered to ~$17,000 in Mar 2026.',alert:false},
+  {id:'copper_wire',name:'Enamelled Cu Wire',tag:'appliance',sectors:['appliances'],unit:'USD/MT',note:'Motor windings in washing machines, AC compressors, refrigerator compressors. Tracks LME copper + ~20% fabrication premium.',alert:false},
   {id:'ndpr',name:'NdPr Oxide',tag:'specialty',sectors:['shared'],unit:'USD/kg',note:'Permanent magnets in inverter AC compressors, variable-speed motors. China controls ~85% supply. Export licensing tightened Dec 2024. Build 3-6 month buffer.',alert:true},
-  {id:'lithium',name:'Lithium Carbonate',tag:'specialty',sectors:['electronics'],unit:'USD/kg',note:'Battery packs in laptops, phones, cordless appliances. Down ~87% from 2022 peak. Structurally oversupplied. Challenge any lithium cost-up claims firmly.',alert:false},
+  {id:'lithium',name:'Lithium Carbonate',tag:'specialty',sectors:['electronics'],unit:'USD/kg',note:'Battery packs in laptops, phones, cordless appliances. Down ~87% from 2022 peak. Challenge any lithium cost-up claims firmly.',alert:false},
   {id:'cobalt',name:'Cobalt',tag:'specialty',sectors:['electronics'],unit:'USD/kg',note:'NMC battery cathodes, hard drive coatings. Down ~25% as EV makers shift to LFP chemistry. Market trend firmly bearish.',alert:false},
-  {id:'abs',name:'ABS Resin',tag:'plastic',sectors:['shared'],unit:'USD/MT',note:'Appliance housings, washing machine lids, fridge panels, TV back covers. China dominant producer. Tracks crude + acrylonitrile. Fluctuations <10% normal.',alert:false},
-  {id:'pvc',name:'PVC Resin',tag:'plastic',sectors:['appliances'],unit:'USD/MT',note:'Wire/cable insulation, door gaskets, flexible hoses. Soft China construction dragged prices lower. Good entry for annual contracts.',alert:false},
-  {id:'pp',name:'Polypropylene (PP)',tag:'plastic',sectors:['shared'],unit:'USD/MT',note:'Washing machine drums, dishwasher parts, appliance connectors. Most price-stable plastic. Low volatility makes PP a reliable BOM anchor.',alert:false},
-  {id:'hips',name:'HIPS',tag:'plastic',sectors:['appliances'],unit:'USD/MT',note:'Refrigerator door liners, inner cabinet walls, AC panels. Tracks styrene/benzene feedstock. Very stable pricing.',alert:false},
-  {id:'pur_foam',name:'Polyurethane Foam',tag:'thermal',sectors:['appliances'],unit:'USD/MT',note:'Rigid PUR foam in refrigerator & freezer walls — determines energy star rating. MDI supply tightened in China 2025. Up ~10% from 2024.',alert:false},
+  {id:'abs',name:'ABS Resin',tag:'plastic',sectors:['shared'],unit:'USD/MT',note:'Appliance housings, washing machine lids, fridge panels, TV back covers. Tracks crude + acrylonitrile.',alert:false},
+  {id:'pvc',name:'PVC Resin',tag:'plastic',sectors:['appliances'],unit:'USD/MT',note:'Wire/cable insulation, door gaskets, flexible hoses. Soft China construction dragged prices lower.',alert:false},
+  {id:'pp',name:'Polypropylene (PP)',tag:'plastic',sectors:['shared'],unit:'USD/MT',note:'Washing machine drums, dishwasher parts, appliance connectors. Most price-stable plastic.',alert:false},
+  {id:'hips',name:'HIPS',tag:'plastic',sectors:['appliances'],unit:'USD/MT',note:'Refrigerator door liners, inner cabinet walls, AC panels. Very stable pricing.',alert:false},
+  {id:'pur_foam',name:'Polyurethane Foam',tag:'thermal',sectors:['appliances'],unit:'USD/MT',note:'Rigid PUR foam in refrigerator & freezer walls. MDI supply tightened in China 2025. Up ~10% from 2024.',alert:false},
 ];
 
 const SEED = {
@@ -204,10 +206,8 @@ const SEED = {
 };
 
 const MONTHS=["Feb'24","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan'25","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan'26","Feb","Mar'26"];
-
 let S={prices:{},fetchedAt:null,sel:'copper',sector:'all',tag:'all',range:24,chart:null};
 
-// Load seed prices as immediate baseline
 function loadSeed(){
   COMMODITIES.forEach(c=>{
     S.prices[c.id]={current:SEED[c.id][SEED[c.id].length-1],history:[...SEED[c.id]],source:'seed'};
@@ -215,46 +215,31 @@ function loadSeed(){
 }
 
 async function loadPrices(force=false){
-  setSpinner(true);
-  setStatus('loading','Fetching…');
+  setSpinner(true);setStatus('loading','Fetching…');
   try{
-    const res = await fetch('/api/prices');
+    const res=await fetch('/api/prices');
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const data=await res.json();
     if(data.error) throw new Error(data.error);
-
-    // Merge API prices over seed
     Object.entries(data.prices).forEach(([id,p])=>{
-      if(p && p.history && p.history.length > 0) S.prices[id] = p;
+      if(p&&p.history&&p.history.length>0) S.prices[id]=p;
     });
-    S.fetchedAt = data.fetchedAt;
-
+    S.fetchedAt=data.fetchedAt;
     setStatus('live','Live · auto-updated');
     setLastLbl(new Date(data.fetchedAt));
-
     if(data.nextFetch){
-      const next = new Date(data.nextFetch);
-      document.getElementById('next-lbl').textContent =
-        'Next auto-fetch: ' + next.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-      document.getElementById('sched-sub').textContent =
-        'Netlify runs 1st & 15th each month · IMF PCPS · No manual action needed';
+      const next=new Date(data.nextFetch);
+      document.getElementById('next-lbl').textContent='Next auto-fetch: '+next.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
     }
-    if(force) toast('Prices refreshed from server ✓');
+    if(force) toast('Prices refreshed ✓');
   }catch(e){
-    console.error('loadPrices error:', e);
-    setStatus('error','Server error — seed data shown');
-    if(force) toast('Could not reach server: ' + e.message);
+    setStatus('error','Seed data shown');
+    if(force) toast('Server error: '+e.message);
   }
-  setSpinner(false);
-  renderAll();
+  setSpinner(false);renderAll();
 }
 
-function init(){
-  loadSeed();
-  renderAll();
-  setStatus('loading','Loading…');
-  loadPrices();
-}
+function init(){loadSeed();renderAll();setStatus('loading','Loading…');loadPrices();}
 
 function filtered(){
   return COMMODITIES.filter(c=>{
@@ -266,8 +251,7 @@ function filtered(){
 
 function pct1y(c){
   const p=S.prices[c.id];if(!p)return 0;
-  const h=p.history;
-  const prev=h.length>=13?h[h.length-13]:h[0];
+  const h=p.history;const prev=h.length>=13?h[h.length-13]:h[0];
   return prev?((p.current-prev)/prev*100):0;
 }
 
@@ -291,11 +275,10 @@ function tl(t){return{base:'base',specialty:'special.',plastic:'plastic',thermal
 
 function renderGrid(){
   const f=filtered();const g=document.getElementById('grid');
-  if(!f.length){g.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3);background:var(--bg2)">No commodities match the selected filters.</div>';return;}
+  if(!f.length){g.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3);background:var(--bg2)">No commodities match filters.</div>';return;}
   if(!f.find(c=>c.id===S.sel)) S.sel=f[0].id;
   g.innerHTML=f.map(c=>{
-    const p=S.prices[c.id];
-    const ch=pct1y(c),up=ch>0.1,dn=ch<-0.1;
+    const p=S.prices[c.id];const ch=pct1y(c),up=ch>0.1,dn=ch<-0.1;
     return`<div class="c-card${c.id===S.sel?' sel':''}${c.alert?' alt':''}" onclick="sel('${c.id}')">
       ${c.alert?'<div class="alert-dot"></div>':''}
       <div class="card-top"><div class="card-name">${c.name}</div><span class="tag t-${c.tag}">${tl(c.tag)}</span></div>
@@ -322,7 +305,7 @@ function renderDetail(){
   const ch1y=pct1y(c);
   const pct2y=hist.length>=2?((hist[hist.length-1]-hist[0])/hist[0]*100).toFixed(1):'—';
   const mx=Math.max(...hist),mn=Math.min(...hist),vol=((mx-mn)/mn*100).toFixed(0);
-  const srcMap={live:'Live — Netlify function · IMF PCPS (LME monthly)',cached:'Cached from last server fetch',seed:'Verified seed data'};
+  const srcMap={live:'Live — Netlify · IMF PCPS (LME monthly)',cached:'Cached from last server fetch',seed:'Verified seed data'};
   document.getElementById('detail').innerHTML=`
     <div class="det-head">
       <div><div class="det-title">${c.name}</div><div class="det-meta">${c.unit} · ${srcMap[p?.source||'seed']}</div></div>
@@ -375,10 +358,7 @@ function setStatus(s,txt){const d=document.getElementById('sdot');d.className='d
 function setLastLbl(d){document.getElementById('last-lbl').textContent='Updated '+d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
 function setSpinner(on){document.getElementById('rbtn').classList.toggle('spin',on);}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
-function addCalendar(){
-  const url = window.location.href;
-  navigator.clipboard.writeText(url).then(()=>toast('URL copied — share this link with your team ✓'));
-}
+function copyLink(){navigator.clipboard.writeText(window.location.href).then(()=>toast('Link copied ✓'));}
 
 init();
 </script>
