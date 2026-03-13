@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FXTrack — INR · USD · CNY</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Clash+Display:wght@400;500;600;700&family=Cabinet+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07080a;--bg2:#0e1015;--bg3:#141720;--bg4:#1c2030;
+  --border:#1e2535;--border2:#2a3350;
+  --text:#e8edf8;--text2:#7b8aaa;--text3:#3d4d70;
+  --usd:#3b82f6;--usd2:#1d4ed8;
+  --cny:#e53e3e;--cny2:#9b1c1c;
+  --inr:#16a34a;
+  --amber:#f59e0b;--amber-bg:#1a1200;
+  --r:6px;--r2:10px;--r3:16px
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Cabinet Grotesk',sans-serif;font-size:14px;line-height:1.5}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");opacity:.4;pointer-events:none;z-index:0}
+.header{position:relative;z-index:1;padding:20px 28px 0;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo-title{font-family:'Clash Display',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.5px}
+.logo-sub{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:.5px}
+.live-pill{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--text2);font-family:'DM Mono',monospace}
+.pulse{width:6px;height:6px;border-radius:50%;background:#16a34a;animation:pulse 2s infinite}
+.pulse.amber{background:var(--amber)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.nav-link{font-size:11px;color:var(--text2);text-decoration:none;font-family:'DM Mono',monospace;border:1px solid var(--border);border-radius:var(--r);padding:4px 10px;transition:all .15s}
+.nav-link:hover{color:var(--text);border-color:var(--border2)}
+.kpi-strip{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin:20px 28px 0;border-radius:var(--r3);overflow:hidden;border:1px solid var(--border)}
+.kpi-cell{background:var(--bg2);padding:18px 22px;position:relative;overflow:hidden}
+.kpi-cell::before{content:'';position:absolute;inset:0;opacity:.06;pointer-events:none}
+.kpi-cell.usd::before{background:var(--usd)}
+.kpi-cell.cny::before{background:var(--cny)}
+.kpi-cell.gap::before{background:var(--amber)}
+.kpi-flag{font-size:22px;margin-bottom:6px}
+.kpi-pair{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:.5px;margin-bottom:2px}
+.kpi-rate{font-family:'Clash Display',sans-serif;font-size:30px;font-weight:700;letter-spacing:-1px;line-height:1}
+.kpi-rate.usd-col{color:var(--usd)}.kpi-rate.cny-col{color:var(--cny)}.kpi-rate.amber-col{color:var(--amber)}
+.kpi-change{display:flex;align-items:center;gap:6px;margin-top:6px}
+.chg-badge{font-size:11px;font-weight:700;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px}
+.chg-badge.up{background:#2a0a0a;color:#f87171}
+.chg-badge.dn{background:#052010;color:#4ade80}
+.kpi-lbl{font-size:11px;color:var(--text3)}
+.kpi-spark{height:32px;width:100%;margin-top:10px}
+.section{position:relative;z-index:1;margin:20px 28px 0}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.section-title{font-family:'Clash Display',sans-serif;font-size:16px;font-weight:600;letter-spacing:-.3px}
+.range-tabs{display:flex;gap:3px}
+.rt{padding:4px 12px;border-radius:var(--r);font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:'DM Mono',monospace;transition:all .15s}
+.rt.active{color:var(--text);border-color:var(--border2);background:var(--bg4)}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r3);padding:20px;margin-bottom:16px}
+.chart-legend{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;cursor:pointer;transition:opacity .2s}
+.leg-item.muted{opacity:.35}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.chart-wrap{position:relative;height:240px}
+.insights-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:20px}
+.insight-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r3);padding:18px;position:relative;overflow:hidden}
+.insight-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.insight-card.usd-card::after{background:var(--usd)}
+.insight-card.cny-card::after{background:var(--cny)}
+.insight-card.verdict-card::after{background:var(--amber)}
+.insight-card.sim-card::after{background:var(--inr)}
+.insight-card.loss-card::after{background:var(--cny)}
+.sim-card{grid-column:1/-1}
+.loss-card{grid-column:1/-1}
+.ic-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;font-family:'DM Mono',monospace;margin-bottom:8px;color:var(--text3)}
+.ic-label.usd-lbl{color:var(--usd)}.ic-label.cny-lbl{color:var(--cny)}.ic-label.verdict-lbl{color:var(--amber)}.ic-label.inr-lbl{color:var(--inr)}.ic-label.red-lbl{color:#f87171}
+.ic-value{font-family:'Clash Display',sans-serif;font-size:22px;font-weight:700;line-height:1.1;margin-bottom:4px}
+.ic-sub{font-size:12px;color:var(--text2);line-height:1.55}
+.ic-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.ic-row:last-child{border-bottom:none}
+.ic-row-lbl{font-size:12px;color:var(--text2)}
+.ic-row-val{font-size:12px;font-weight:700;font-family:'DM Mono',monospace}
+.sim-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.sim-label{font-size:12px;color:var(--text2);white-space:nowrap}
+.sim-input{background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);padding:6px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;width:140px;outline:none}
+.sim-input:focus{border-color:var(--usd)}
+.sim-select{background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);padding:6px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none;cursor:pointer}
+.sim-result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sim-res{background:var(--bg3);border-radius:var(--r2);padding:14px;text-align:center;position:relative;border:1px solid transparent}
+.sim-res-lbl{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:.5px;margin-bottom:4px;text-transform:uppercase}
+.sim-res-val{font-family:'Clash Display',sans-serif;font-size:18px;font-weight:700}
+.sim-res-sub{font-size:10px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace}
+.sim-res.best{border-color:#16a34a;background:#051a10}
+.sim-res.worst{border-color:#9b1c1c;background:#1a0505}
+.sim-badge{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.5px;white-space:nowrap;font-family:'DM Mono',monospace}
+.sim-badge.good{background:#16a34a;color:#fff}
+.sim-badge.bad{background:#9b1c1c;color:#fca5a5}
+.loss-table-wrap{overflow-x:auto;margin-top:12px}
+.loss-table{width:100%;border-collapse:collapse;font-size:12px}
+.loss-table th{background:var(--bg3);padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--text3);font-family:'DM Mono',monospace;white-space:nowrap;border-bottom:1px solid var(--border)}
+.loss-table th:first-child{text-align:left}
+.loss-table td{padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--text2);border-bottom:1px solid var(--border)}
+.loss-table td:first-child{text-align:left;color:var(--text);font-weight:500}
+.loss-table .red{color:#f87171}.loss-table .green{color:#4ade80}
+.loss-total{background:var(--bg4)!important}
+.loss-total td{color:var(--text)!important;font-weight:700!important}
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r3);overflow:hidden;margin-bottom:20px}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--bg3);padding:10px 14px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--text3);font-family:'DM Mono',monospace;white-space:nowrap;border-bottom:1px solid var(--border)}
+thead th:first-child{text-align:left}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:var(--bg3)}
+tbody tr:last-child{border-bottom:none}
+td{padding:9px 14px;text-align:right;font-family:'DM Mono',monospace;color:var(--text2)}
+td:first-child{text-align:left;color:var(--text);font-weight:500}
+td.usd-val{color:var(--usd)}td.cny-val{color:var(--cny)}
+td.rec-usd{background:#0a1528;color:var(--usd);font-weight:700}
+td.rec-cny{background:#1a0a0a;color:var(--cny);font-weight:700}
+td.chg-up{color:#f87171}td.chg-dn{color:#4ade80}
+.vol-bar-wrap{display:flex;align-items:center;gap:8px;margin-top:4px}
+.vol-bar{height:4px;border-radius:2px;flex:1;background:var(--bg4);overflow:hidden}
+.vol-fill{height:100%;border-radius:2px;transition:width .4s}
+.playbook{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r3);padding:20px;margin-bottom:20px}
+.playbook-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+.pb-head{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;font-family:'DM Mono',monospace;margin-bottom:8px}
+.pb-list{font-size:12px;color:var(--text2);line-height:2.2;list-style:none;padding:0}
+.sched-bar{position:relative;z-index:1;background:var(--bg2);border-top:1px solid var(--border);margin-top:8px;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.sched-icon{width:30px;height:30px;border-radius:var(--r);background:var(--bg4);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sched-text strong{font-size:12px;font-weight:600;display:block}
+.sched-text span{font-size:11px;color:var(--text2)}
+.btn{padding:7px 16px;border-radius:var(--r);border:none;cursor:pointer;font-family:'Cabinet Grotesk',sans-serif;font-weight:700;font-size:12px;transition:all .15s}
+.btn-primary{background:var(--usd2);color:#fff}.btn-primary:hover{background:#1e40af}
+.btn-sec{background:var(--bg3);color:var(--text2);border:1px solid var(--border2)}.btn-sec:hover{color:var(--text)}
+.btn.spin svg{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.footer{position:relative;z-index:1;margin:0 28px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.footer-note{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace}
+#toast{position:fixed;bottom:22px;right:22px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:9px 15px;font-size:12px;color:var(--text);z-index:2000;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none}
+#toast.show{opacity:1;transform:translateY(0)}
+@media(max-width:700px){
+  .kpi-strip{grid-template-columns:1fr}
+  .sim-result-grid{grid-template-columns:repeat(2,1fr)}
+  .header,.section,.sched-bar,.footer{padding-left:16px;padding-right:16px}
+  .kpi-strip{margin-left:16px;margin-right:16px}
+}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<div class="header">
+  <div>
+    <div class="logo-title">FX<span style="color:var(--usd)">Track</span></div>
+    <div class="logo-sub">INR · USD · CNY · AUTO-UPDATED BIWEEKLY</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <a class="nav-link" href="/">← Commodity Tracker</a>
+    <div class="live-pill"><span class="pulse" id="status-dot"></span><span id="status-txt">Loading…</span></div>
+    <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace" id="updated-lbl"></div>
+    <button class="btn btn-sec" id="rbtn" onclick="loadFX(true)" style="display:flex;align-items:center;gap:5px;padding:5px 12px">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.9 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Refresh
+    </button>
+  </div>
+</div>
+
+<!-- KPI Strip -->
+<div class="kpi-strip">
+  <div class="kpi-cell usd">
+    <div class="kpi-flag">🇺🇸</div>
+    <div class="kpi-pair">USD → INR (live)</div>
+    <div class="kpi-rate usd-col" id="kpi-usd">—</div>
+    <div class="kpi-change">
+      <span class="chg-badge up" id="kpi-usd-chg">—</span>
+      <span class="kpi-lbl" id="kpi-usd-lbl">vs 2Y ago</span>
+    </div>
+    <div class="kpi-spark"><canvas id="spark-usd"></canvas></div>
+  </div>
+  <div class="kpi-cell cny">
+    <div class="kpi-flag">🇨🇳</div>
+    <div class="kpi-pair">CNY → INR (live)</div>
+    <div class="kpi-rate cny-col" id="kpi-cny">—</div>
+    <div class="kpi-change">
+      <span class="chg-badge up" id="kpi-cny-chg">—</span>
+      <span class="kpi-lbl" id="kpi-cny-lbl">vs 2Y ago</span>
+    </div>
+    <div class="kpi-spark"><canvas id="spark-cny"></canvas></div>
+  </div>
+  <div class="kpi-cell gap">
+    <div class="kpi-flag">⚖️</div>
+    <div class="kpi-pair">CNY outpaced USD by</div>
+    <div class="kpi-rate amber-col" id="kpi-gap">—</div>
+    <div class="kpi-change">
+      <span class="chg-badge up" id="kpi-gap-badge">over 2Y</span>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-top:10px;line-height:1.6" id="kpi-gap-sub">CNY contracts cost more in INR depreciation than equivalent USD deals</div>
+  </div>
+</div>
+
+<!-- Chart -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-title">Exchange Rate History</div>
+    <div class="range-tabs">
+      <button class="rt" onclick="setRange(6,this)">6M</button>
+      <button class="rt" onclick="setRange(12,this)">1Y</button>
+      <button class="rt active" onclick="setRange(26,this)">All</button>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-legend">
+      <div class="leg-item" id="leg-usd" onclick="toggleSeries('usd')"><div class="leg-dot" style="background:var(--usd)"></div><span>USD/INR</span></div>
+      <div class="leg-item" id="leg-cny" onclick="toggleSeries('cny')"><div class="leg-dot" style="background:var(--cny)"></div><span>CNY/INR (×7 scaled)</span></div>
+      <div style="margin-left:auto;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">CNY multiplied ×7 to overlay on same axis</div>
+    </div>
+    <div class="chart-wrap"><canvas id="main-chart"></canvas></div>
+  </div>
+</div>
+
+<!-- Insights -->
+<div class="section">
+  <div class="section-head"><div class="section-title">Negotiation Intelligence</div></div>
+  <div class="insights-grid">
+
+    <div class="insight-card usd-card">
+      <div class="ic-label usd-lbl">USD/INR analysis</div>
+      <div class="ic-value usd-col" id="ins-usd-chg">—</div>
+      <div class="ic-sub" id="ins-usd-sub" style="margin-bottom:12px">Loading…</div>
+      <div class="ic-row"><span class="ic-row-lbl">2Y high</span><span class="ic-row-val" id="ins-usd-hi">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">2Y low</span><span class="ic-row-val" id="ins-usd-lo">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">Avg monthly drift</span><span class="ic-row-val" id="ins-usd-drift">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">Best month to lock</span><span class="ic-row-val" style="color:#4ade80" id="ins-usd-best">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">Worst month</span><span class="ic-row-val" style="color:#f87171" id="ins-usd-worst">—</span></div>
+    </div>
+
+    <div class="insight-card cny-card">
+      <div class="ic-label cny-lbl">CNY/INR analysis</div>
+      <div class="ic-value cny-col" id="ins-cny-chg">—</div>
+      <div class="ic-sub" id="ins-cny-sub" style="margin-bottom:12px">Loading…</div>
+      <div class="ic-row"><span class="ic-row-lbl">2Y high</span><span class="ic-row-val" id="ins-cny-hi">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">2Y low</span><span class="ic-row-val" id="ins-cny-lo">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">Avg monthly drift</span><span class="ic-row-val" id="ins-cny-drift">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">Best month to lock</span><span class="ic-row-val" style="color:#4ade80" id="ins-cny-best">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">Worst month</span><span class="ic-row-val" style="color:#f87171" id="ins-cny-worst">—</span></div>
+    </div>
+
+    <div class="insight-card verdict-card">
+      <div class="ic-label verdict-lbl">⚡ Verdict</div>
+      <div class="ic-value amber-col" id="ins-verdict">CNY costs more</div>
+      <div class="ic-sub" style="margin-bottom:12px" id="ins-verdict-sub">Loading…</div>
+      <div class="ic-row"><span class="ic-row-lbl">USD 2Y depreciation</span><span class="ic-row-val" style="color:#f87171" id="ins-v-usd">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">CNY 2Y depreciation</span><span class="ic-row-val" style="color:#f87171" id="ins-v-cny">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">CNY extra drag</span><span class="ic-row-val" style="color:var(--amber)" id="ins-v-gap">—</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">USD hedging (India)</span><span class="ic-row-val" style="color:#4ade80">Abundant</span></div>
+      <div class="ic-row"><span class="ic-row-lbl">CNY hedging (India)</span><span class="ic-row-val" style="color:#f87171">Very limited</span></div>
+      <div style="margin-top:12px;font-size:11px;color:var(--text2);background:var(--amber-bg);border-radius:var(--r);padding:8px 10px;line-height:1.5" id="ins-verdict-action">Loading recommendation…</div>
+    </div>
+
+    <!-- CNY Loss Calculator -->
+    <div class="insight-card loss-card">
+      <div class="ic-label red-lbl">📉 CNY contract loss vs equivalent USD deal</div>
+      <div class="ic-sub" style="margin-bottom:14px">How much extra INR you paid each quarter by being in CNY instead of USD — based on actual monthly average rates.</div>
+      <div class="sim-controls" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="sim-label">Monthly order (USD equiv):</span>
+          <input class="sim-input" id="loss-amount" type="number" value="50000" oninput="calcLoss()">
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-left:auto">Cumulative INR loss over full data range if all deals in CNY vs USD</div>
+      </div>
+      <div class="loss-table-wrap">
+        <table class="loss-table">
+          <thead>
+            <tr>
+              <th style="text-align:left">Period</th>
+              <th>USD/INR avg</th>
+              <th>CNY/INR avg</th>
+              <th>INR via USD</th>
+              <th>INR via CNY</th>
+              <th>Extra paid (CNY)</th>
+            </tr>
+          </thead>
+          <tbody id="loss-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Deal Simulator -->
+    <div class="insight-card sim-card">
+      <div class="ic-label inr-lbl">₹ Deal simulator — INR cost at any month's actual rate</div>
+      <div class="sim-controls">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="sim-label">Order value:</span>
+          <input class="sim-input" id="sim-amount" type="number" value="100000" oninput="runSim()">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="sim-label">Currency:</span>
+          <select class="sim-select" id="sim-currency" onchange="runSim()">
+            <option value="usd">USD</option>
+            <option value="cny">CNY</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="sim-label">Month:</span>
+          <select class="sim-select" id="sim-month" onchange="runSim()"></select>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">Rate = actual monthly average for selected month</div>
+      </div>
+      <div class="sim-result-grid" id="sim-results">
+        <div class="sim-res"><div class="sim-res-lbl">Loading…</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Monthly Table -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-title">Full Monthly Rate Table</div>
+    <span style="font-size:11px;color:var(--text3)">Green MoM = INR strengthened. Cheaper column = lower INR cost per USD of goods.</span>
+  </div>
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Month</th>
+            <th>USD/INR</th><th>MoM Δ</th>
+            <th>CNY/INR</th><th>MoM Δ</th>
+            <th>USD/CNY</th>
+            <th>Cheaper for INR buyer</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Volatility -->
+<div class="section">
+  <div class="section-head"><div class="section-title">Volatility & Risk Profile</div></div>
+  <div class="insights-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+    <div class="insight-card">
+      <div class="ic-label">USD/INR range</div>
+      <div class="ic-value" id="vol-usd-range">—</div>
+      <div class="vol-bar-wrap"><span style="font-size:10px;color:var(--text3);width:28px">low</span><div class="vol-bar"><div class="vol-fill" id="vf-usd" style="background:var(--usd);width:45%"></div></div><span style="font-size:10px;color:var(--text3)">high</span></div>
+      <div class="ic-sub" style="margin-top:8px">RBI-managed gradual slide. Predictable for annual contract planning. Easily hedgeable via INR forwards.</div>
+    </div>
+    <div class="insight-card">
+      <div class="ic-label">CNY/INR range</div>
+      <div class="ic-value" id="vol-cny-range">—</div>
+      <div class="vol-bar-wrap"><span style="font-size:10px;color:var(--text3);width:28px">low</span><div class="vol-bar"><div class="vol-fill" id="vf-cny" style="background:var(--cny);width:72%"></div></div><span style="font-size:10px;color:var(--text3)">high</span></div>
+      <div class="ic-sub" style="margin-top:8px">PBOC daily fixings create sharp step-changes. Structurally riskier for INR importers with limited hedging options.</div>
+    </div>
+    <div class="insight-card">
+      <div class="ic-label">USD/CNY band</div>
+      <div class="ic-value" id="vol-usdcny-range">—</div>
+      <div class="ic-sub" style="margin-top:8px">PBOC manages USD/CNY in a tight band. If your supplier quotes in CNY and you pay in USD, this band limits PBOC surprise exposure.</div>
+    </div>
+    <div class="insight-card">
+      <div class="ic-label">INR structural trend</div>
+      <div class="ic-value" style="color:#f87171">~4–5%/yr</div>
+      <div class="ic-sub" style="margin-top:8px">INR depreciates ~4–5% per year vs USD historically. Build this into all annual cost models regardless of invoice currency.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Playbook -->
+<div class="section">
+  <div class="section-head"><div class="section-title">Negotiation Playbook</div></div>
+  <div class="playbook">
+    <div class="playbook-grid">
+      <div>
+        <div class="pb-head" style="color:var(--usd)">If contract is in USD</div>
+        <ul class="pb-list">
+          <li>✓ USD rose ~11% vs INR in 2Y — painful but manageable</li>
+          <li>✓ Lock prices in Jan/Feb — historically softest USD/INR months</li>
+          <li>✓ Use monthly average rate for settlement, not spot</li>
+          <li>✓ Forward contract USD via Indian bank — widely available</li>
+          <li>⚠ Avoid new spot deals when USD/INR is at multi-month highs</li>
+        </ul>
+      </div>
+      <div>
+        <div class="pb-head" style="color:var(--cny)">If contract is in CNY</div>
+        <ul class="pb-list">
+          <li>✗ CNY cost 3.8 pp MORE than USD in INR terms over 2Y</li>
+          <li>✓ Push to convert to USD — same goods, lower FX drag</li>
+          <li>✓ If stuck in CNY, demand quarterly FX adjustment clause</li>
+          <li>✓ Mid-2024 was cheapest CNY period — use as benchmark</li>
+          <li>⚠ New CNY highs vs INR = worst time to sign new CNY contracts</li>
+        </ul>
+      </div>
+      <div>
+        <div class="pb-head" style="color:var(--amber)">General FX strategy</div>
+        <ul class="pb-list">
+          <li>✓ Budget 4–5% annual FX uplift into all USD cost models</li>
+          <li>✓ Budget 5–7% annual FX uplift into all CNY cost models</li>
+          <li>✓ Best structure: agree price in USD, pay supplier in CNY</li>
+          <li>✓ Track USD/CNY weekly — PBOC fixings move it overnight</li>
+          <li>✓ Never sign annual CNY contracts without a reset clause</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sched-bar">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="sched-icon">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="#3b82f6" stroke-width="1.3"/><path d="M5 1v2M11 1v2M2 7h12" stroke="#3b82f6" stroke-width="1.3" stroke-linecap="round"/></svg>
+    </div>
+    <div>
+      <strong style="font-size:12px;font-weight:600;display:block" id="next-fetch-lbl">Next auto-fetch: 1st or 15th of month</strong>
+      <span style="font-size:11px;color:var(--text2)">Netlify scheduled function · Frankfurter API (ECB data) · Free, no key needed</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-sec" onclick="copyLink()">📋 Copy share link</button>
+    <button class="btn btn-primary" onclick="loadFX(true)">Fetch now</button>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-note">Seed data: x-rates.com · Live: Frankfurter API (ECB) · Not financial advice</div>
+  <div style="font-size:11px;color:var(--text3)">Auto-updates 1st & 15th each month via Netlify</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// Verified seed data — fallback if API unavailable
+// USD/INR: x-rates.com exact 2024+2025 | Jan-Feb'26: TheGlobalEconomy | Mar'26: live 92.49
+// CNY/INR: x-rates.com exact 2024+2025 | Jan-Feb'26: exchangerates.org/Wise | Mar'26: live 13.41
+const SEED = {
+  months: [
+    "Jan'24","Feb'24","Mar'24","Apr'24","May'24","Jun'24",
+    "Jul'24","Aug'24","Sep'24","Oct'24","Nov'24","Dec'24",
+    "Jan'25","Feb'25","Mar'25","Apr'25","May'25","Jun'25",
+    "Jul'25","Aug'25","Sep'25","Oct'25","Nov'25","Dec'25",
+    "Jan'26","Feb'26","Mar'26"
+  ],
+  usdInr: {
+    history: [
+      83.110,82.974,83.036,83.406,83.354,83.480,
+      83.593,83.880,83.802,84.029,84.385,84.971,
+      86.230,86.961,86.619,85.602,85.197,85.926,
+      86.068,87.516,88.272,88.371,88.881,89.997,
+      90.785,90.742,92.490
+    ],
+    current: 92.490
+  },
+  cnyInr: {
+    history: [
+      11.652,11.547,11.530,11.525,11.525,11.509,
+      11.510,11.729,11.843,11.866,11.717,11.673,
+      11.810,11.963,11.946,11.740,11.800,11.963,
+      12.001,12.196,12.389,12.411,12.511,12.772,
+      12.980,13.050,13.410
+    ],
+    current: 13.410
+  }
+};
+SEED.usdCny = {
+  history: SEED.usdInr.history.map((u,i)=>parseFloat((u/SEED.cnyInr.history[i]).toFixed(3))),
+  current: parseFloat((SEED.usdInr.current/SEED.cnyInr.current).toFixed(3))
+};
+
+let D = JSON.parse(JSON.stringify(SEED)); // working data
+let RANGE = 26;
+let hiddenSeries = {};
+let mainChart = null;
+let sparkBuilt = false;
+
+function pct(a,b){ return (b-a)/a*100; }
+function fmtPct(v){ return (v>=0?'+':'')+v.toFixed(2)+'%'; }
+function L(v){ return v>=1e5?(v/1e5).toFixed(2)+'L':(v/1e3).toFixed(1)+'K'; }
+
+async function loadFX(force=false){
+  setStatus('loading','Fetching…');
+  document.getElementById('rbtn').classList.add('spin');
+  try {
+    const res = await fetch('/api/fx-prices');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+
+    // Merge live data
+    D.months   = data.months;
+    D.usdInr   = data.usdInr;
+    D.cnyInr   = data.cnyInr;
+    D.usdCny   = data.usdCny;
+
+    const src = data.source === 'live' ? 'Live · Frankfurter API' : 'Cached seed data';
+    setStatus('live', src);
+
+    const fetched = new Date(data.fetchedAt);
+    document.getElementById('updated-lbl').textContent =
+      'Updated ' + fetched.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+
+    if(data.nextFetch){
+      const next = new Date(data.nextFetch);
+      document.getElementById('next-fetch-lbl').textContent =
+        'Next auto-fetch: ' + next.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    }
+
+    if(force) toast('Rates refreshed ✓');
+  } catch(e) {
+    setStatus('seed','Seed data — server unreachable');
+    if(force) toast('Could not reach server: ' + e.message);
+  }
+  document.getElementById('rbtn').classList.remove('spin');
+  renderAll();
+}
+
+function renderAll(){
+  updateKPIs();
+  if(!sparkBuilt){ buildSparklines(); sparkBuilt=true; }
+  buildMainChart();
+  buildInsights();
+  buildTable();
+  buildSimMonths();
+  runSim();
+  calcLoss();
+}
+
+function updateKPIs(){
+  const u = D.usdInr, c = D.cnyInr;
+  const uChg = pct(u.history[0], u.current);
+  const cChg = pct(c.history[0], c.current);
+  const gap  = cChg - uChg;
+
+  document.getElementById('kpi-usd').textContent = u.current.toFixed(2);
+  document.getElementById('kpi-cny').textContent = c.current.toFixed(2);
+  document.getElementById('kpi-gap').textContent = (gap>=0?'+':'')+gap.toFixed(1)+' pp';
+
+  const ub = document.getElementById('kpi-usd-chg');
+  ub.textContent = (uChg>=0?'▲ +':'▼ ')+Math.abs(uChg).toFixed(1)+'%';
+  ub.className = 'chg-badge ' + (uChg>0?'up':'dn');
+  document.getElementById('kpi-usd-lbl').textContent = 'vs ' + D.months[0];
+
+  const cb = document.getElementById('kpi-cny-chg');
+  cb.textContent = (cChg>=0?'▲ +':'▼ ')+Math.abs(cChg).toFixed(1)+'%';
+  cb.className = 'chg-badge ' + (cChg>0?'up':'dn');
+  document.getElementById('kpi-cny-lbl').textContent = 'vs ' + D.months[0];
+
+  document.getElementById('kpi-gap-badge').textContent =
+    'CNY +'+(cChg>=0?cChg.toFixed(1):'—')+'% vs USD +'+(uChg>=0?uChg.toFixed(1):'—')+'%';
+
+  document.getElementById('kpi-gap-sub').textContent =
+    gap > 0
+      ? `Every CNY contract cost you ${gap.toFixed(1)} pp more in INR depreciation vs an equivalent USD deal`
+      : `USD contracts cost ${Math.abs(gap).toFixed(1)} pp more than CNY this period`;
+}
+
+function buildSparklines(){
+  ['usd','cny'].forEach(id=>{
+    const data = id==='usd' ? D.usdInr.history : D.cnyInr.history;
+    const col  = id==='usd' ? '#3b82f6' : '#e53e3e';
+    const ctx  = document.getElementById('spark-'+id).getContext('2d');
+    new Chart(ctx,{type:'line',data:{labels:D.months,datasets:[{data,borderColor:col,backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+  });
+}
+
+function buildMainChart(){
+  if(mainChart){mainChart.destroy();mainChart=null;}
+  const n = Math.min(RANGE, D.months.length);
+  const labels   = D.months.slice(-n);
+  const usdData  = D.usdInr.history.slice(-n);
+  const cnyScaled= D.cnyInr.history.slice(-n).map(v=>v*7);
+  const allVals  = [...usdData, ...cnyScaled].filter(Boolean);
+  const minY = Math.floor(Math.min(...allVals) * 0.97);
+  const maxY = Math.ceil(Math.max(...allVals) * 1.01);
+
+  const ctx = document.getElementById('main-chart').getContext('2d');
+  mainChart = new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'USD/INR',data:hiddenSeries.usd?[]:usdData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.06)',fill:true,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:0.3,yAxisID:'y'},
+      {label:'CNY×7', data:hiddenSeries.cny?[]:cnyScaled,borderColor:'#e53e3e',backgroundColor:'rgba(229,62,62,0.04)',fill:true,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:0.3,yAxisID:'y'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2030',borderColor:'#2a3350',borderWidth:1,titleColor:'#e8edf8',bodyColor:'#7b8aaa',
+        callbacks:{label:ctx=>{
+          if(ctx.datasetIndex===0) return ` USD/INR: ₹${ctx.parsed.y.toFixed(3)}`;
+          return ` CNY/INR: ₹${(ctx.parsed.y/7).toFixed(3)} (×7: ${ctx.parsed.y.toFixed(2)})`;
+        }}}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3d4d70',font:{size:10,family:"'DM Mono'"},maxRotation:45,autoSkip:true,maxTicksLimit:13}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#7b8aaa',font:{size:10,family:"'DM Mono'"},callback:v=>'₹'+v.toFixed(0)},min:minY,max:maxY}
+      }
+    }
+  });
+}
+
+function buildInsights(){
+  const u = D.usdInr.history, c = D.cnyInr.history, uc = D.usdCny.history;
+  const uChg = pct(u[0], D.usdInr.current);
+  const cChg = pct(c[0], D.cnyInr.current);
+  const gap  = cChg - uChg;
+
+  const uHi = Math.max(...u), uLo = Math.min(...u);
+  const cHi = Math.max(...c), cLo = Math.min(...c);
+  const ucHi= Math.max(...uc.filter(Boolean)), ucLo = Math.min(...uc.filter(Boolean));
+
+  const uBestIdx  = u.indexOf(uLo), uWorstIdx  = u.indexOf(uHi);
+  const cBestIdx  = c.indexOf(cLo), cWorstIdx  = c.indexOf(cHi);
+
+  document.getElementById('ins-usd-chg').textContent = fmtPct(uChg) + ' since ' + D.months[0];
+  document.getElementById('ins-usd-sub').textContent =
+    `Rose from ₹${u[0].toFixed(3)} → ₹${D.usdInr.current.toFixed(3)}. Steady RBI-managed depreciation.`;
+  document.getElementById('ins-usd-hi').textContent   = '₹' + uHi.toFixed(3);
+  document.getElementById('ins-usd-lo').textContent   = '₹' + uLo.toFixed(3);
+  document.getElementById('ins-usd-drift').textContent= '+' + (uChg/u.length).toFixed(2) + '%/mo';
+  document.getElementById('ins-usd-best').textContent = D.months[uBestIdx];
+  document.getElementById('ins-usd-worst').textContent= D.months[uWorstIdx];
+
+  document.getElementById('ins-cny-chg').textContent = fmtPct(cChg) + ' since ' + D.months[0];
+  document.getElementById('ins-cny-sub').textContent =
+    `Rose from ₹${c[0].toFixed(3)} → ₹${D.cnyInr.current.toFixed(3)}. PBOC-driven, faster than USD.`;
+  document.getElementById('ins-cny-hi').textContent   = '₹' + cHi.toFixed(3);
+  document.getElementById('ins-cny-lo').textContent   = '₹' + cLo.toFixed(3);
+  document.getElementById('ins-cny-drift').textContent= '+' + (cChg/c.length).toFixed(2) + '%/mo';
+  document.getElementById('ins-cny-best').textContent = D.months[cBestIdx];
+  document.getElementById('ins-cny-worst').textContent= D.months[cWorstIdx];
+
+  document.getElementById('ins-v-usd').textContent = fmtPct(uChg);
+  document.getElementById('ins-v-cny').textContent = fmtPct(cChg);
+  document.getElementById('ins-v-gap').textContent = (gap>=0?'+':'')+gap.toFixed(1)+' pp';
+  document.getElementById('ins-verdict-sub').textContent =
+    `Over ${u.length} months, CNY contracts cost Indian importers ${Math.abs(gap).toFixed(1)} pp ${gap>0?'more':'less'} in INR depreciation than equivalent USD contracts.`;
+  document.getElementById('ins-verdict-action').innerHTML =
+    `<strong style="color:var(--amber)">Action:</strong> ${gap>0
+      ? `Push Chinese suppliers to invoice in USD. You'll pay ${gap.toFixed(1)} pp less FX drag. If they insist on CNY, demand a quarterly FX reset clause.`
+      : `CNY is currently cheaper in FX terms. Still consider USD for better hedging options and predictability.`}`;
+
+  // Volatility
+  document.getElementById('vol-usd-range').textContent = `₹${uLo.toFixed(2)}–₹${uHi.toFixed(2)}`;
+  document.getElementById('vol-cny-range').textContent = `₹${cLo.toFixed(3)}–₹${cHi.toFixed(3)}`;
+  document.getElementById('vol-usdcny-range').textContent = `${ucLo.toFixed(3)}–${ucHi.toFixed(3)}`;
+
+  const uBand = (uHi-uLo)/uLo*100, cBand = (cHi-cLo)/cLo*100;
+  const maxB = Math.max(uBand,cBand,1);
+  document.getElementById('vf-usd').style.width = (uBand/maxB*90)+'%';
+  document.getElementById('vf-cny').style.width = (cBand/maxB*90)+'%';
+}
+
+function buildTable(){
+  const u=D.usdInr.history, c=D.cnyInr.history, uc=D.usdCny.history;
+  let html='';
+  for(let i=0;i<D.months.length;i++){
+    const pu=i>0?u[i-1]:u[i], pc=i>0?c[i-1]:c[i];
+    const du=pct(pu,u[i]), dc=pct(pc,c[i]);
+    const cnyInrPerUsd = c[i] * uc[i];
+    const cheaper = cnyInrPerUsd < u[i] ? 'CNY' : 'USD';
+    html+=`<tr>
+      <td>${D.months[i]}</td>
+      <td class="usd-val">${u[i].toFixed(3)}</td>
+      <td class="${i===0?'':du>=0?'chg-up':'chg-dn'}">${i===0?'—':fmtPct(du)}</td>
+      <td class="cny-val">${c[i].toFixed(3)}</td>
+      <td class="${i===0?'':dc>=0?'chg-up':'chg-dn'}">${i===0?'—':fmtPct(dc)}</td>
+      <td>${uc[i]?uc[i].toFixed(3):'—'}</td>
+      <td class="${cheaper==='CNY'?'rec-cny':'rec-usd'}">${cheaper==='CNY'?'🟥 CNY':'🟦 USD'}</td>
+    </tr>`;
+  }
+  document.getElementById('table-body').innerHTML = html;
+}
+
+function buildSimMonths(){
+  const sel = document.getElementById('sim-month');
+  if(sel.options.length > 0) return; // already built
+  D.months.forEach((m,i)=>{
+    const o=document.createElement('option');
+    o.value=i; o.textContent=m;
+    sel.appendChild(o);
+  });
+  sel.value = D.months.length-1;
+}
+
+function runSim(){
+  const amount   = parseFloat(document.getElementById('sim-amount').value)||100000;
+  const currency = document.getElementById('sim-currency').value;
+  const idx      = parseInt(document.getElementById('sim-month').value);
+
+  const hist    = currency==='usd' ? D.usdInr.history : D.cnyInr.history;
+  const currVal = currency==='usd' ? D.usdInr.current : D.cnyInr.current;
+  const currIdx = D.months.length-1;
+
+  const thenRate = hist[idx];
+  const nowRate  = currVal;
+  const loRate   = Math.min(...hist);
+  const hiRate   = Math.max(...hist);
+  const loIdx    = hist.indexOf(loRate);
+  const hiIdx    = hist.indexOf(hiRate);
+
+  const col  = currency==='usd'?'var(--usd)':'var(--cny)';
+  const unit = currency==='usd'?'USD':'CNY';
+
+  document.getElementById('sim-results').innerHTML=`
+    <div class="sim-res${thenRate<=nowRate?' best':''}">
+      ${thenRate<=nowRate?'<div class="sim-badge good">CHEAPER THEN</div>':''}
+      <div class="sim-res-lbl">${D.months[idx]}</div>
+      <div class="sim-res-val" style="color:${col}">₹${L(amount*thenRate)}</div>
+      <div class="sim-res-sub">@ ₹${thenRate.toFixed(3)}/${unit}</div>
+    </div>
+    <div class="sim-res${thenRate>nowRate?' best':''}">
+      ${thenRate>nowRate?'<div class="sim-badge good">CHEAPER NOW</div>':''}
+      <div class="sim-res-lbl">${D.months[currIdx]} (today)</div>
+      <div class="sim-res-val" style="color:${col}">₹${L(amount*nowRate)}</div>
+      <div class="sim-res-sub">@ ₹${nowRate.toFixed(3)}/${unit}</div>
+    </div>
+    <div class="sim-res best">
+      <div class="sim-badge good">2Y CHEAPEST</div>
+      <div class="sim-res-lbl">${D.months[loIdx]}</div>
+      <div class="sim-res-val" style="color:#4ade80">₹${L(amount*loRate)}</div>
+      <div class="sim-res-sub">@ ₹${loRate.toFixed(3)}/${unit}</div>
+    </div>
+    <div class="sim-res worst">
+      <div class="sim-badge bad">2Y PRICIEST</div>
+      <div class="sim-res-lbl">${D.months[hiIdx]}</div>
+      <div class="sim-res-val" style="color:#f87171">₹${L(amount*hiRate)}</div>
+      <div class="sim-res-sub">@ ₹${hiRate.toFixed(3)}/${unit}</div>
+    </div>`;
+}
+
+function calcLoss(){
+  const usdAmt = parseFloat(document.getElementById('loss-amount').value)||50000;
+  const u=D.usdInr.history, c=D.cnyInr.history, uc=D.usdCny.history;
+  const n = u.length;
+
+  // Build periods dynamically from available data
+  const periods = [];
+  for(let i=0;i<n;i+=6){
+    const end = Math.min(i+6, n);
+    periods.push({ label: D.months[i] + '–' + D.months[end-1], months: Array.from({length:end-i},(_,k)=>i+k) });
+  }
+
+  let totalLoss = 0;
+  let html = '';
+
+  periods.forEach(p=>{
+    const ms = p.months;
+    const avgU  = ms.reduce((s,i)=>s+u[i],0)/ms.length;
+    const avgC  = ms.reduce((s,i)=>s+c[i],0)/ms.length;
+    const avgUC = ms.reduce((s,i)=>s+(uc[i]||0),0)/ms.length;
+    const inrUsd = usdAmt * avgU;
+    const inrCny = (usdAmt * avgUC) * avgC;
+    const extra  = inrCny - inrUsd;
+    totalLoss   += extra * ms.length;
+    html+=`<tr>
+      <td>${p.label}</td>
+      <td class="usd-val">₹${avgU.toFixed(2)}</td>
+      <td class="cny-val">₹${avgC.toFixed(3)}</td>
+      <td>₹${L(inrUsd)}</td>
+      <td>₹${L(inrCny)}</td>
+      <td class="${extra>0?'red':'green'}">${extra>0?'+':''}₹${L(Math.abs(extra))} ${extra>0?'more':'saved'}</td>
+    </tr>`;
+  });
+
+  html+=`<tr class="loss-total">
+    <td colspan="5">TOTAL extra paid (CNY vs USD) over ${n} months</td>
+    <td class="${totalLoss>0?'red':'green'}">${totalLoss>0?'+':''}₹${L(Math.abs(totalLoss))}</td>
+  </tr>`;
+
+  document.getElementById('loss-body').innerHTML = html;
+}
+
+function toggleSeries(id){
+  hiddenSeries[id]=!hiddenSeries[id];
+  document.getElementById('leg-'+id).classList.toggle('muted',hiddenSeries[id]);
+  buildMainChart();
+}
+
+function setRange(r,btn){
+  RANGE=r;
+  document.querySelectorAll('.rt').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  buildMainChart();
+}
+
+function setStatus(s,txt){
+  const d=document.getElementById('status-dot');
+  d.className='pulse';
+  if(s==='loading') d.classList.add('amber');
+  else if(s==='seed') d.style.background='#3d4d70';
+  document.getElementById('status-txt').textContent=txt;
+}
+
+function copyLink(){
+  navigator.clipboard.writeText(window.location.href)
+    .then(()=>toast('Link copied — share with your team ✓'));
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// Init — load seed immediately, then fetch live
+renderAll();
+setStatus('loading','Loading…');
+loadFX(false);
+</script>
+</body>
+</html>
