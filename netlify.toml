@@ -5,7 +5,12 @@
 [functions]
   node_bundler = "esbuild"
 
-# Runs every 14 days at 06:00 UTC (biweekly Monday mornings)
+# Commodity prices — 1st and 15th of every month
 [[scheduled_functions]]
   function = "fetch-prices"
+  cron = "0 6 1,15 * *"
+
+# FX rates — 1st and 15th of every month
+[[scheduled_functions]]
+  function = "fetch-fx"
   cron = "0 6 1,15 * *"
